@@ -58,7 +58,7 @@ func MakeDeleteHandler(client *containerd.Client, cni gocni.CNI) func(w http.Res
 		}
 
 		name := req.FunctionName
-
+		
 		function, err := GetFunction(client, name, namespace)
 		if err != nil {
 			msg := fmt.Sprintf("function %s.%s not found", name, namespace)
