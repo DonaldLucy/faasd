@@ -16,16 +16,25 @@ PROTOBUF_VERSION="33.1"
 cd /tmp
 if [ ! -d protobuf ]; then
     git clone https://github.com/protocolbuffers/protobuf.git
+else
+    cd protobuf
+    git fetch --tags
+    git reset --hard
 fi
 cd protobuf
-git fetch --tags
 git checkout v$PROTOBUF_VERSION
 git submodule update --init --recursive
-./autogen.sh
+
+if [ -f "./autogen.sh" ]; then
+    chmod +x ./autogen.sh
+    ./autogen.sh
+fi
+
 ./configure
 make -j$(nproc)
 sudo make install
 sudo ldconfig
+
 echo "Protoc version:"
 protoc --version
 
@@ -33,7 +42,12 @@ echo "=== Installing gRPC ==="
 cd /tmp
 if [ ! -d grpc ]; then
     git clone -b v1.58.0 https://github.com/grpc/grpc
+else
+    cd grpc
+    git reset --hard
+    git submodule update --init --recursive
 fi
+
 cd grpc
 git submodule update --init --recursive
 mkdir -p cmake/build
@@ -44,4 +58,12 @@ sudo make install
 sudo ldconfig
 
 echo "=== Verifying gRPC installation ==="
-which grpc_cpp_plugin
+if command -v grpc_cpp_plugin &> /dev/null
+then
+    echo "grpc_cpp_plugin found at $(which grpc_cpp_plugin)"
+else
+    echo "ERROR: grpc_cpp_plugin not found"
+    exit 1
+fi
+
+echo "=== Setup complete ==="
