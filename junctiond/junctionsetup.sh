@@ -1,9 +1,9 @@
 #!/bin/bash
-# install_protobuf_grpc_v2.sh
+# install_protobuf_grpc_final.sh
 set -euo pipefail # Exit on error, unset variable, or command failure in a pipe
 
 # --- Configuration ---
-# Use recent, stable tags. Adjust these if specific versions are required.
+# Use recent, stable tags. You can change these versions if needed.
 PROTOBUF_VERSION="v26.1"
 GRPC_VERSION="v1.64.0"
 INSTALL_DIR="/usr/local"
@@ -18,36 +18,40 @@ sudo apt update
 sudo apt upgrade -y
 
 echo "Installing build essentials and development tools..."
-# Minimal set of tools needed for building from source
-sudo apt install -y build-essential cmake git pkg-config curl wget unzip \
-    autoconf automake libtool
+# Tools needed for building from source (includes autoconf for Protobuf's configure)
+sudo apt install -y build-essential cmake git pkg-config curl wget unzip autoconf automake libtool
 
 # Prepare fresh build environment
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
+---
+
 # --- 2. Installing Protocol Buffers (Protobuf) ---
-## ⚙️ Building Protobuf
-echo "--- 2. Building Protobuf from source ---"
+## ⚙️ Building Protobuf (Uses Autotools)
+echo "--- 2. Building Protobuf from source (Autotools) ---"
 
 if [ ! -d "protobuf" ]; then
     git clone https://github.com/protocolbuffers/protobuf.git
 fi
 cd protobuf
 git checkout "$PROTOBUF_VERSION"
+# Pull in dependencies like Googletest
 git submodule update --init --recursive
 
-# The 'safe.directory' config is often needed when working with git in /tmp.
+# Mark the directory as safe for git operations in /tmp
 git config --global --add safe.directory "$PWD"
 
-# Protobuf (modern versions) uses ./configure directly
+# **Protobuf Build Steps:**
+# Use ./configure directly for modern tags (or ./autogen.sh then ./configure for older tags)
+# This assumes the configure script is already present after cloning.
 ./configure --prefix="$INSTALL_DIR"
 make -j$(nproc)
 sudo make install
 sudo ldconfig
 
-cd "$BUILD_DIR" # Return to main build directory
+cd "$BUILD_DIR" # Return to main build directory staging area
 
 echo "Protoc version verification:"
 protoc --version
@@ -56,9 +60,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+---
+
 # --- 3. Installing gRPC (gRPC core) ---
-## 🔗 Building gRPC
-echo "--- 3. Building gRPC from source ---"
+## 🔗 Building gRPC (Uses CMake)
+echo "--- 3. Building gRPC from source (CMake) ---"
 
 if [ ! -d "grpc" ]; then
     git clone -b "$GRPC_VERSION" https://github.com/grpc/grpc
@@ -66,10 +72,11 @@ fi
 
 cd grpc
 git checkout "$GRPC_VERSION"
-# Submodules include Abseil (for gRPC dependencies), re2, etc.
+# Crucial step: pulls in Abseil, re2, and other critical gRPC dependencies
 git submodule update --init --recursive
 
-# gRPC uses CMake for building (DO NOT run autogen.sh)
+# **gRPC Build Steps:**
+# gRPC uses CMake. We skip ./configure and ./autogen.sh entirely.
 mkdir -p cmake/build
 cd cmake/build
 cmake ../.. \
@@ -81,6 +88,10 @@ cmake ../.. \
 make -j$(nproc)
 sudo make install
 sudo ldconfig
+
+cd "$BUILD_DIR" # Return to main build directory
+
+---
 
 # --- 4. Verification ---
 ## ✅ Final Checks
