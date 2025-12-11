@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package junctiond;
 
+option go_package = "github.com/DonaldLucy/faasd/pkg/junctiond;junctiond";
+
+
 // This defines the public API that Go will call.
 // JunctionD runs locally, so Go talks to it over gRPC.
 // Exactly mirrors the C++ JunctionD class (spawn, remove, list).

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 # --- Dependencies ---
 find_package(Protobuf REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
+find_package(absl REQUIRED) 
 
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
 message(STATUS "Using gRPC")
@@ -13,7 +14,7 @@ message(STATUS "Using gRPC")
 include_directories(
     ${Protobuf_INCLUDE_DIRS}
     ${GRPC_INCLUDE_DIRS}
-    gen
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen
 )
 
 # --- Protobuf / gRPC generated files ---
@@ -34,7 +35,7 @@ set(SOURCES
     ${PROTO_SRC}
 )
 
-add_executable(junctiond ${SOURCES} ${PROTO_HDRS})
+add_executable(junctiond ${SOURCES})
 
 # --- Link libraries ---
 target_link_libraries(junctiond
