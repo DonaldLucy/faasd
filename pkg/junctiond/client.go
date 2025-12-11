@@ -7,7 +7,7 @@ import (
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials/insecure"
     "google.golang.org/grpc/encoding/gzip"
-    "google.golang.org/grpc/metadata"
+    // "google.golang.org/grpc/metadata"
 )
 
 // Client is the high-level Go wrapper around the gRPC JunctionService client.
