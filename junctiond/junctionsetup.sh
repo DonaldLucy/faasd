@@ -12,7 +12,7 @@ echo "=== Installing Abseil (for gRPC dependencies) ==="
 sudo apt install -y libabsl-dev
 
 echo "=== Installing Protocol Buffers ==="
-PROTOBUF_VERSION="23.5"
+PROTOBUF_VERSION="33.1"
 cd /tmp
 if [ ! -d protobuf ]; then
     git clone https://github.com/protocolbuffers/protobuf.git
