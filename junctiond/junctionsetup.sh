@@ -1,91 +1,98 @@
 #!/bin/bash
-# install_protobuf_grpc.sh
-set -euo pipefail # Added 'u' for unset variables, 'o pipefail' for better error handling
+# install_protobuf_grpc_v2.sh
+set -euo pipefail # Exit on error, unset variable, or command failure in a pipe
 
 # --- Configuration ---
-PROTOBUF_VERSION="v26.1" # Changed to a recent, stable tag (e.g., v26.1)
-GRPC_VERSION="v1.64.0"    # Changed to a recent, stable tag (e.g., v1.64.0)
-INSTALL_DIR="/usr/local"  # Standard installation prefix
+# Use recent, stable tags. Adjust these if specific versions are required.
+PROTOBUF_VERSION="v26.1"
+GRPC_VERSION="v1.64.0"
+INSTALL_DIR="/usr/local"
 BUILD_DIR="/tmp/protobuf_grpc_build"
 
-echo "=== System Update and Dependencies Installation ==="
+echo "=== 🚀 Starting Setup: Protobuf ($PROTOBUF_VERSION) and gRPC ($GRPC_VERSION) ==="
+
+# --- 1. System Update and Dependencies ---
+## 📦 Installing Prerequisites
+echo "--- 1. Installing Prerequisites ---"
 sudo apt update
 sudo apt upgrade -y
 
-echo "Installing build essentials and common tools..."
-# Added 'unzip' and 'autoconf/automake/libtool' are already included.
-# Removed 'libabsl-dev' - often better to let gRPC handle Abseil dependencies via submodules.
+echo "Installing build essentials and development tools..."
+# Minimal set of tools needed for building from source
 sudo apt install -y build-essential cmake git pkg-config curl wget unzip \
     autoconf automake libtool
 
-# Cleanup previous build artifacts and create a fresh build directory
+# Prepare fresh build environment
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-# --- Installing Protocol Buffers (Protobuf) ---
+# --- 2. Installing Protocol Buffers (Protobuf) ---
+## ⚙️ Building Protobuf
+echo "--- 2. Building Protobuf from source ---"
 
-echo "=== Installing Protocol Buffers ($PROTOBUF_VERSION) ==="
 if [ ! -d "protobuf" ]; then
     git clone https://github.com/protocolbuffers/protobuf.git
 fi
 cd protobuf
-# Use the configured version
 git checkout "$PROTOBUF_VERSION"
 git submodule update --init --recursive
 
-# The 'safe.directory' config is generally needed when working with git in /tmp.
-git config --global --add safe.directory "$BUILD_DIR/protobuf"
+# The 'safe.directory' config is often needed when working with git in /tmp.
+git config --global --add safe.directory "$PWD"
 
-# Build and install Protobuf
-./autogen.sh
-./configure --prefix="$INSTALL_DIR" # Specify installation directory
+# Protobuf (modern versions) uses ./configure directly
+./configure --prefix="$INSTALL_DIR"
 make -j$(nproc)
 sudo make install
 sudo ldconfig
+
+cd "$BUILD_DIR" # Return to main build directory
 
 echo "Protoc version verification:"
 protoc --version
 if [ $? -ne 0 ]; then
-    echo "ERROR: Protobuf installation failed."
+    echo "ERROR: Protobuf installation failed. Exiting."
     exit 1
 fi
 
-# --- Installing gRPC and gRPC C++ dependencies (gRPC core) ---
+# --- 3. Installing gRPC (gRPC core) ---
+## 🔗 Building gRPC
+echo "--- 3. Building gRPC from source ---"
 
-echo "=== Installing gRPC ($GRPC_VERSION) ==="
-cd "$BUILD_DIR"
 if [ ! -d "grpc" ]; then
-    # Clone with the specified version tag
     git clone -b "$GRPC_VERSION" https://github.com/grpc/grpc
 fi
 
 cd grpc
-# Checkout again to ensure the correct version if directory existed prior
 git checkout "$GRPC_VERSION"
-# Recursively update submodules (including Abseil, re2, etc.)
+# Submodules include Abseil (for gRPC dependencies), re2, etc.
 git submodule update --init --recursive
 
-# Build and install gRPC
+# gRPC uses CMake for building (DO NOT run autogen.sh)
 mkdir -p cmake/build
 cd cmake/build
-cmake ../.. -DgRPC_INSTALL=ON \
+cmake ../.. \
+    -DgRPC_INSTALL=ON \
     -DgRPC_BUILD_TESTS=OFF \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" # Specify installation directory
+    -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
+
 make -j$(nproc)
 sudo make install
 sudo ldconfig
 
-# --- Verification ---
+# --- 4. Verification ---
+## ✅ Final Checks
+echo "--- 4. Verification ---"
 
-echo "=== Verifying gRPC installation ==="
 GRPC_PLUGIN_PATH=$(which grpc_cpp_plugin 2>/dev/null)
 if [ -n "$GRPC_PLUGIN_PATH" ]; then
-    echo "grpc_cpp_plugin found at $GRPC_PLUGIN_PATH"
+    echo "**SUCCESS**: grpc_cpp_plugin found at $GRPC_PLUGIN_PATH"
+    echo "Protobuf and gRPC libraries and headers are installed to $INSTALL_DIR"
 else
-    echo "ERROR: grpc_cpp_plugin not found. Please check Protobuf and gRPC logs."
+    echo "ERROR: grpc_cpp_plugin not found. gRPC installation failed."
     exit 1
 fi
 
-echo "=== Setup complete! Protobuf and gRPC are installed to $INSTALL_DIR ==="
+echo "=== ✨ Setup complete! ==="
