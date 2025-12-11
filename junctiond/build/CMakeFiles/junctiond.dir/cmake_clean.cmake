@@ -1,4 +1,8 @@
 file(REMOVE_RECURSE
+  "/users/Danielx/faasd/junctiond/gen/junctiond.grpc.pb.cc"
+  "/users/Danielx/faasd/junctiond/gen/junctiond.grpc.pb.h"
+  "/users/Danielx/faasd/junctiond/gen/junctiond.pb.cc"
+  "/users/Danielx/faasd/junctiond/gen/junctiond.pb.h"
   "CMakeFiles/junctiond.dir/gen/junctiond.grpc.pb.cc.o"
   "CMakeFiles/junctiond.dir/gen/junctiond.grpc.pb.cc.o.d"
   "CMakeFiles/junctiond.dir/gen/junctiond.pb.cc.o"
