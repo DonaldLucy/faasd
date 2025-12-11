@@ -21,6 +21,10 @@ else
     git fetch --tags
     git reset --hard
 fi
+
+# Mark protobuf as safe
+git config --global --add safe.directory /tmp/protobuf
+
 cd protobuf
 git checkout v$PROTOBUF_VERSION
 git submodule update --init --recursive
