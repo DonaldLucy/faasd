@@ -1,9 +1,7 @@
 #!/bin/bash
-# install_protobuf_grpc_final.sh
-set -euo pipefail # Exit on error, unset variable, or command failure in a pipe
+set -euo pipefail
 
 # --- Configuration ---
-# Use recent, stable tags. You can change these versions if needed.
 PROTOBUF_VERSION="v26.1"
 GRPC_VERSION="v1.64.0"
 INSTALL_DIR="/usr/local"
@@ -12,75 +10,41 @@ BUILD_DIR="/tmp/protobuf_grpc_build"
 echo "=== 🚀 Starting Setup: Protobuf ($PROTOBUF_VERSION) and gRPC ($GRPC_VERSION) ==="
 
 # --- 1. System Update and Dependencies ---
-## 📦 Installing Prerequisites
 echo "--- 1. Installing Prerequisites ---"
 sudo apt update
 sudo apt upgrade -y
 
-echo "Installing build essentials and development tools..."
-# Tools needed for building from source (includes autoconf for Protobuf's configure)
-sudo apt install -y build-essential cmake git pkg-config curl wget unzip autoconf automake libtool
+echo "Installing build essentials..."
+sudo apt install -y build-essential cmake git pkg-config curl \
+    autoconf libtool
 
-# Prepare fresh build environment
+# Cleanup and Prepare Build Directory
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
+# -----------------------------------------------------------------------------
 
-# --- 2. Installing Protocol Buffers (Protobuf) ---
-## ⚙️ Building Protobuf (Uses Autotools)
-echo "--- 2. Building Protobuf from source (Autotools) ---"
+# --- 2. Installing Protocol Buffers (Protobuf) via CMake ---
+echo "--- 2. Building Protobuf (CMake) ---"
 
+# Clone Protobuf
 if [ ! -d "protobuf" ]; then
     git clone https://github.com/protocolbuffers/protobuf.git
 fi
 cd protobuf
 git checkout "$PROTOBUF_VERSION"
-# Pull in dependencies like Googletest
 git submodule update --init --recursive
 
-# Mark the directory as safe for git operations in /tmp
+# Safe directory config
 git config --global --add safe.directory "$PWD"
 
-# **Protobuf Build Steps:**
-# Use ./configure directly for modern tags (or ./autogen.sh then ./configure for older tags)
-# This assumes the configure script is already present after cloning.
-./configure --prefix="$INSTALL_DIR"
-make -j$(nproc)
-sudo make install
-sudo ldconfig
-
-cd "$BUILD_DIR" # Return to main build directory staging area
-
-echo "Protoc version verification:"
-protoc --version
-if [ $? -ne 0 ]; then
-    echo "ERROR: Protobuf installation failed. Exiting."
-    exit 1
-fi
-
----
-
-# --- 3. Installing gRPC (gRPC core) ---
-## 🔗 Building gRPC (Uses CMake)
-echo "--- 3. Building gRPC from source (CMake) ---"
-
-if [ ! -d "grpc" ]; then
-    git clone -b "$GRPC_VERSION" https://github.com/grpc/grpc
-fi
-
-cd grpc
-git checkout "$GRPC_VERSION"
-# Crucial step: pulls in Abseil, re2, and other critical gRPC dependencies
-git submodule update --init --recursive
-
-# **gRPC Build Steps:**
-# gRPC uses CMake. We skip ./configure and ./autogen.sh entirely.
-mkdir -p cmake/build
-cd cmake/build
-cmake ../.. \
-    -DgRPC_INSTALL=ON \
-    -DgRPC_BUILD_TESTS=OFF \
+# Build using CMake (Fixes the missing ./configure issue)
+mkdir -p cmake_build
+cd cmake_build
+cmake .. \
+    -DCMAKE_CXX_STANDARD=17 \
+    -Dprotobuf_BUILD_TESTS=OFF \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
 
@@ -88,21 +52,53 @@ make -j$(nproc)
 sudo make install
 sudo ldconfig
 
-cd "$BUILD_DIR" # Return to main build directory
+cd "$BUILD_DIR" # Return to base
 
----
+# Verify Protobuf
+echo "Verifying Protoc..."
+protoc --version
 
-# --- 4. Verification ---
-## ✅ Final Checks
+# -----------------------------------------------------------------------------
+
+# --- 3. Installing gRPC via CMake ---
+echo "--- 3. Building gRPC (CMake) ---"
+
+# Clone gRPC
+if [ ! -d "grpc" ]; then
+    git clone -b "$GRPC_VERSION" https://github.com/grpc/grpc
+fi
+cd grpc
+git checkout "$GRPC_VERSION"
+git submodule update --init --recursive
+
+# Build using CMake
+mkdir -p cmake_build
+cd cmake_build
+cmake .. \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DgRPC_INSTALL=ON \
+    -DgRPC_BUILD_TESTS=OFF \
+    -DgRPC_ABSL_PROVIDER=module \
+    -DgRPC_PROTOBUF_PROVIDER=package \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
+
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+
+cd "$BUILD_DIR"
+
+# -----------------------------------------------------------------------------
+
+# --- 4. Final Verification ---
 echo "--- 4. Verification ---"
 
-GRPC_PLUGIN_PATH=$(which grpc_cpp_plugin 2>/dev/null)
-if [ -n "$GRPC_PLUGIN_PATH" ]; then
-    echo "**SUCCESS**: grpc_cpp_plugin found at $GRPC_PLUGIN_PATH"
-    echo "Protobuf and gRPC libraries and headers are installed to $INSTALL_DIR"
+if command -v grpc_cpp_plugin &> /dev/null; then
+    echo "✅ SUCCESS: grpc_cpp_plugin found at $(which grpc_cpp_plugin)"
 else
-    echo "ERROR: grpc_cpp_plugin not found. gRPC installation failed."
+    echo "❌ ERROR: grpc_cpp_plugin not found."
     exit 1
 fi
 
-echo "=== ✨ Setup complete! ==="
+echo "=== ✨ Setup Complete! ==="
