@@ -27,7 +27,8 @@ public:
         // Convert protobuf → C++ struct
         FunctionData f;
         f.name     = req->name();
-        f.rootfs   = req->rootfs();
+        f.execpath   = req->execpath();
+        f.args = req ->args();
         f.cpu      = req->cpu();
         f.memoryMB = req->memorymb();
 
