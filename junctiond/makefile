@@ -1,24 +1,8 @@
-# CXX = g++
-# CXXFLAGS = -std=c++17 -pthread -Wall -O2
-# TARGET = test
-# SRCS = test.cpp junctiond.cpp
-# OBJS = $(SRCS:.cpp=.o)
-
-# all: $(TARGET)
-
-# $(TARGET): $(OBJS)
-# 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
-
-# %.o: %.cpp
-# 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# clean:
-# 	rm -f $(OBJS) $(TARGET)
 CXX = g++
 CXXFLAGS = -std=c++17 -pthread -Wall -O2
 
 # 1. Common Files (The Logic)
-# These are used by BOTH the test and the server.
+# junctiond.cpp is included here as it contains the logic needed by test.cpp
 COMMON_SRCS = junctiond.cpp
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 
@@ -27,34 +11,31 @@ TEST_TARGET = test
 TEST_SRCS = test.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 
-# 3. Target: Server (main.cpp)
-SERVER_TARGET = server
-SERVER_SRCS = main.cpp
-SERVER_OBJS = $(SERVER_SRCS:.cpp=.o)
+# We remove the SERVER_TARGET definitions.
 
-# Default: Build both executables
-all: $(TEST_TARGET) $(SERVER_TARGET)
+# Default: Build only the test executable
+all: $(TEST_TARGET)
 
 # --- Build Rules ---
 
 # Build the Test Binary
 $(TEST_TARGET): $(TEST_OBJS) $(COMMON_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(COMMON_OBJS)
+    $(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(COMMON_OBJS)
 
-# Build the Server Binary
-$(SERVER_TARGET): $(SERVER_OBJS) $(COMMON_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(SERVER_OBJS) $(COMMON_OBJS)
+# We remove the rule for the server target.
 
 # --- Helper Commands ---
 
-# Convenience command to build AND run the server
-run: $(SERVER_TARGET)
-	@echo ">>> Starting Server..."
-	./$(SERVER_TARGET)
+# Convenience command to build AND run the test
+run: $(TEST_TARGET)
+    @echo ">>> Starting Test..."
+    ./$(TEST_TARGET)
 
 # Compile .cpp files to .o files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+    $(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Clean only the files relevant to the test
 clean:
-	rm -f *.o $(TEST_TARGET) $(SERVER_TARGET)
+    rm -f *.o $(TEST_TARGET)
+# We remove the cleanup for the 'server' target.
