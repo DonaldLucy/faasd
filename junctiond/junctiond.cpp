@@ -33,7 +33,7 @@ bool JunctionD::spawn(const FunctionData &func) {
     if (pid < 0) return false;
     if (pid == 0) {
         execlp(junctionRun.c_str(), "junction_run", cfgFile.c_str(), nullptr);
-        std::cerr << "[junctiond] Exec failed!" << std::endl;
+        std::cerr << "[junctiond] Exec failed!" << std::endl; 
         exit(1);
     }
 

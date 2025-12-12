@@ -100,5 +100,67 @@ else
     echo "❌ ERROR: grpc_cpp_plugin not found."
     exit 1
 fi
+echo "=== ✨ cpp Setup Complete! ==="
 
-echo "=== ✨ Setup Complete! ==="
+# --- 5. Installing Go Toolchain ---
+echo "--- 5. Installing Go Toolchain and Environment ---"
+
+# Set the specified Go version (1.24.5 as requested)
+GO_VERSION="1.24.5" 
+GO_TARBALL="go$GO_VERSION.linux-amd64.tar.gz"
+GO_URL="https://golang.org/dl/$GO_TARBALL"
+
+# Download and Install Go
+curl -L -o /tmp/$GO_TARBALL "$GO_URL"
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf /tmp/$GO_TARBALL
+
+# Add Go binaries to the PATH for the current session and for all users
+echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go-path.sh
+source /etc/profile.d/go-path.sh
+
+# Verify Go installation
+echo "Verifying Go version..."
+go version
+
+# -----------------------------------------------------------------------------
+
+# --- 6. Installing Go gRPC Plugins ---
+echo "--- 6. Installing Go gRPC Protobuf Plugins ---"
+
+# These tools are essential for generating Go code from your .proto files.
+
+# Set GOPATH environment variable and add $GOPATH/bin to PATH
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+
+# 6a. Install the Protobuf compiler plugin for Go
+echo "Installing protoc-gen-go..."
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+# 6b. Install the gRPC service code generator plugin for Go
+echo "Installing protoc-gen-go-grpc..."
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Verify Go plugins
+if command -v protoc-gen-go &> /dev/null; then
+    echo "✅ SUCCESS: protoc-gen-go found at $(which protoc-gen-go)"
+else
+    echo "❌ ERROR: protoc-gen-go not found."
+    exit 1
+fi
+
+if command -v protoc-gen-go-grpc &> /dev/null; then
+    echo "✅ SUCCESS: protoc-gen-go-grpc found at $(which protoc-gen-go-grpc)"
+else
+    echo "❌ ERROR: protoc-gen-go-grpc not found."
+    exit 1
+fi
+
+# --- 7. Final Clean-up ---
+echo "--- 7. Final Clean-up ---"
+# Note: Assuming $BUILD_DIR was set earlier in the script (e.g., /tmp/protobuf_grpc_build)
+rm -rf "$BUILD_DIR" 
+rm -f /tmp/$GO_TARBALL
+
+echo "=== ✨ Go Toolchain Setup Complete! ==="
