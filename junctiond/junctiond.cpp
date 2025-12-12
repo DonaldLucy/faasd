@@ -14,7 +14,6 @@ JunctionD::JunctionD() {
     });
     monitorThread.detach();
 }
-
 JunctionD::~JunctionD() {
     std::lock_guard<std::mutex> lock(mtx);
     for (auto &kv : statusMap) {
