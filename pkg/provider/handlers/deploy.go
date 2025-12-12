@@ -24,6 +24,7 @@ import (
 	"github.com/openfaas/faasd/pkg/service"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	junc "github.com/DonaldLucy/faasd/pkg/junctiond"
 )
 
 const annotationLabelPrefix = "com.openfaas.annotations."
@@ -142,6 +143,34 @@ func deploy(ctx context.Context, req types.FunctionDeployment, client *container
 	}
 
 	name := req.Service
+
+	//Fake Logic Here
+	if os.Getenv("FAASD_USE_JUNCTION") == "1" {
+		//  socket path, default /run/junctiond.sock
+		sock := os.Getenv("JUNCTIOND_SOCK")
+		if sock == "" {
+			sock = "/run/junctiond.sock"
+		}
+
+		jd, err := junc.New(sock)
+		if err != nil {
+			log.Printf("[Junction] failed to connect to junctiond at %s: %v", sock, err)
+		} else {
+			defer jd.Close()
+
+			// Only pass name
+			f := &junc.FunctionData{
+				Name: name,
+			}
+
+			if err := jd.Spawn(ctx, f); err != nil {
+				log.Printf("[Junction] spawn failed for %s: %v", name, err)
+			} else {
+				log.Printf("[Junction] spawned function %s via junctiond", name)
+			}
+		}
+	}
+
 
 	labels, err := buildLabels(&req)
 	if err != nil {
@@ -350,4 +379,40 @@ func preDeploy(client *containerd.Client, additional int64) error {
 		return fmt.Errorf("the OpenFaaS CE EULA allows %d/%d namespace(s), upgrade to faasd Pro to continue", faasdMaxNs, countNs)
 	}
 	return nil
+}
+
+// - This is a placeholder/example. You MUST adapt the field mapping to match
+//   your actual proto definition.
+// - Right now this function is called *in addition* to the containerd-based
+//   deploy path. Once Junctiond is stable, you can:
+//   1) Flip a flag (e.g. FAASD_JUNCTION_STRICT=1) to skip containerd entirely.
+//   2) Or remove the containerd code from deploy() for Junction-only mode.
+// - Ask ChatGPT when Junctiond deployment is done
+
+func spawnViaJunctiond(ctx context.Context, sock string, req *types.FunctionDeployment) error {
+    // 1. Connect to junctiond over a Unix socket.
+    jd, err := junctiond.New(sock)
+    if err != nil {
+        return fmt.Errorf("failed to connect to junctiond at %s: %w", sock, err)
+    }
+    defer jd.Close()
+
+    // 2. Build the Junctiond FunctionData from the OpenFaaS deployment request.
+    //    The exact field names depend on your proto. Replace the TODOs below
+    //    with the real mapping once the proto is finalized.
+    f := &junctiond.FunctionData{
+        // TODO: adapt to your proto fields:
+        // Name: req.Service,
+        // Image or rootfs: req.Image (or another field you define)
+        // CPU:   some value from req.Requests.Limits or custom labels/annotations
+        // Memory: same as above
+        // Env:   req.EnvVars, etc.
+    }
+
+    // 3. Call Spawn() on the Junctiond client.
+    if err := jd.Spawn(ctx, f); err != nil {
+        return fmt.Errorf("junctiond Spawn() failed: %w", err)
+    }
+
+    return nil
 }
